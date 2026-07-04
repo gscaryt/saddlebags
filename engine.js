@@ -145,13 +145,17 @@ function drawHorse(c,x,y,s,o){
   c.quadraticCurveTo(-11,18,4,6);c.closePath();c.fill();c.stroke();
   if(mane.pat==='rainbow'){c.save();c.clip();for(let i=0;i<5;i++){c.fillStyle=RAINBOW[i];c.fillRect(-24,-6+i*10,30,10);}c.restore();c.stroke();}
   c.restore();
-  // far legs
-  const legLen=54;
+  // far legs — two segments hinged at a knee/hock so the gallop actually folds, not just swings rigid
+  const upLen=30,loLen=27;
   function leg(hx,ang,col){
-    const sw=mv?Math.sin(ang)*0.42:0;
+    const sw=mv?Math.sin(ang)*0.5:0;
+    const fold=mv?Math.max(0,Math.sin(ang))*1.0:0;
     c.save();c.translate(hx,-56);c.rotate(sw);
-    c.fillStyle=col;c.beginPath();c.roundRect(-5.5,-2,11,legLen+2,5.5);c.fill();c.stroke();
-    c.fillStyle='#3B2417';c.beginPath();c.roundRect(-6.5,legLen-9,13,10,3);c.fill();
+    c.fillStyle=col;c.beginPath();c.roundRect(-5.5,-2,11,upLen+2,5.5);c.fill();c.stroke();
+    c.save();c.translate(0,upLen);c.rotate(fold);
+    c.fillStyle=col;c.beginPath();c.roundRect(-5,-1,10,loLen,4.5);c.fill();c.stroke();
+    c.fillStyle='#3B2417';c.beginPath();c.roundRect(-6,loLen-8,12,9,3);c.fill();
+    c.restore();
     c.restore();
   }
   if(!rest){
@@ -231,7 +235,10 @@ function drawHorse(c,x,y,s,o){
   c.fillStyle=bl.a;c.beginPath();c.roundRect(-28,-110,48,24,5);c.fill();c.stroke();
   if(bl.pat==='star'){c.fillStyle=bl.t;c.font='8px sans-serif';c.textAlign='center';c.textBaseline='middle';
     c.fillText('✦',-18,-100);c.fillText('✦',-5,-93);c.fillText('✦',8,-101);c.fillText('✦',15,-92);}
+  // trim stripe clipped to the blanket's own rounded silhouette so it doesn't poke past the corners
+  c.save();c.beginPath();c.roundRect(-28,-110,48,24,5);c.clip();
   c.fillStyle=bl.t;c.fillRect(-28,-90,48,4);
+  c.restore();
   c.fillStyle='#7A3020';c.beginPath();c.ellipse(-4,-110,17,7,0,Math.PI,0);c.fill();c.stroke();
   // saddlebag (near side, rear) — bulges with load
   const wl=(o.wl||0)+(o.wr||0);
@@ -283,9 +290,16 @@ function drawToucan(c,x,y,s,o){
   // chest/face patch
   c.fillStyle='#FFF8E1';c.beginPath();c.ellipse(6.5,-3,10,13.5,0.12,0,TAU);c.fill();
   c.strokeStyle='rgba(16,19,24,0.35)';c.stroke();c.strokeStyle='#101318';
-  // wing
-  c.save();c.translate(-5,-1);c.rotate(flap*0.6-0.15);
-  c.fillStyle='#171B22';c.beginPath();c.ellipse(0,7,7.5,13,0.18,0,TAU);c.fill();c.stroke();
+  // wing — anchored at the shoulder so the tip sweeps a real flap arc, not just a shrug
+  c.save();c.translate(-4,-6);c.rotate(flap*1.1-0.2);
+  c.fillStyle='#171B22';c.beginPath();
+  c.moveTo(3,-1);
+  c.quadraticCurveTo(-10,-5,-21,3);
+  c.quadraticCurveTo(-16,13,-3,12);
+  c.quadraticCurveTo(5,6,3,-1);
+  c.closePath();c.fill();c.stroke();
+  c.fillStyle='#D7263D';c.beginPath();
+  c.moveTo(-14,6);c.quadraticCurveTo(-16,10,-13,11.5);c.quadraticCurveTo(-9,9,-9,6);c.closePath();c.fill();
   c.restore();
   // eye
   c.fillStyle='#59C3E3';c.beginPath();c.arc(8,-9,4.6,0,TAU);c.fill();c.stroke();

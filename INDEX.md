@@ -202,3 +202,64 @@ shop, and boot. This is where gameplay rules and balancing math live
   belt crates 52→60px with larger emoji/price-tag/badge fonts, bag-panel
   cell cap 34→38, bag header/count font +1px, topbar `.pill` font 13.5→14.5px)
   since the conveyor belt read too small on phone screens.
+- ~~Chunk I: `#bagBtn`/`#routePill` taps do nothing during a run.~~ Done —
+  `#topbar` sets `pointer-events:none` and only whitelisted `#muteBtn`/
+  `#homeBtn` back to `auto` (styles.css); `#bagBtn` and `#routePill` were
+  missing from that whitelist, so taps fell through to the canvas underneath
+  (silently triggering the trot-burst instead). Added both to the whitelist.
+- ~~Chunk J: sound stops working entirely on iOS Safari after a while.~~ Done
+  — `Sound.tone()`/`Sound.noise()` (data.js) read `this.ctx` directly instead
+  of calling `this.ensure()`; once Safari auto-suspends the AudioContext
+  (backgrounding, idle) anywhere outside the canvas-tap/title-button call
+  sites that happened to call `ensure()`, every later `Sound.*` call silently
+  no-op'd forever. Both now call `this.ensure()` themselves, so every sound
+  self-heals (creates/resumes) the context inline, regardless of call site.
+- ~~Chunk K: saddle blanket's yellow trim stripe looks offset from the
+  blanket.~~ Done — the trim was a flat `fillRect` drawn over a rounded-rect
+  blanket (`drawHorse`, engine.js), so at the bottom corners the trim's sharp
+  edges poked past the blanket's curve. Now clipped to the same `roundRect`
+  path before filling, matching the clip pattern already used for
+  dapple/pinto/rainbow patterns elsewhere in the same function.
+- ~~Chunk L: Day-1 starting coins too tight to comfortably afford the 3
+  required apples.~~ Done — `defaultSave().coins` (data.js) 12→20.
+- ~~Chunk M: item-gated event options don't show their success odds, and it
+  wasn't obvious they're safer than improvising.~~ Done — `showEventCard`'s
+  item branch (game.js) now shows `ITEM_SUCCESS_P` (a new named constant,
+  0.9) as "NN% safe" next to the button, same spot the risky branch already
+  shows `riskP()`'s rounded percentage; bumped the flat chance 0.82→0.9 so
+  it reads as clearly safer than improvising (`riskP()` is ~0.5-0.7).
+- ~~Chunk N: shop purchases (cosmetics) have zero gameplay payoff beyond the
+  visual swap.~~ Done — new `wardrobeBonus()` (game.js) grants a flat +1 to
+  Biscuit's starting morale once you've bought any cosmetic beyond the
+  6 free defaults (one per category in `SV.owned`); feeds into Chunk O's
+  starting-hearts formula. No new persisted field — derived from existing
+  `SV.owned` counts.
+- ~~Chunk O: Biscuit always starts a day at max morale (`G.hearts=3`), so
+  there was no reason to feed him before departing.~~ Done — `buildDay`
+  (game.js) now starts at `Math.min(3,1+wardrobeBonus())` (low, usually 1)
+  instead of a flat 3; `feedHorse()` (game.js) now also bumps `G.hearts`
+  by 1 (capped at 3) alongside the existing patience refill, so packing a
+  few apples/carrots to feed pre-departure is how you get Biscuit back to
+  full morale (and full risk-taking confidence via `riskP()`).
+- ~~Chunk P: Pip's wing barely reads as a wing, let alone a flapping one.~~
+  Done — `drawToucan`'s wing block (engine.js) was a small ellipse anchored
+  near the body center with a ~27° rotation arc. Replaced with a longer
+  feather-shaped path (plus a small red accent) anchored at the shoulder
+  with a wider flap arc, so the tip visibly sweeps clear of the body
+  silhouette instead of reading as a shrug.
+- ~~Chunk Q: Biscuit's gallop legs were one rigid rounded-rect swinging from
+  the hip, no knee/hock bend.~~ Done — `drawHorse`'s `leg()` helper
+  (engine.js) now draws two segments (hip→knee, knee→hoof) with the lower
+  segment folding via a `fold` angle that peaks mid-forward-swing and
+  straightens at the gait extremes, approximating the tucked-knee gallop
+  look in `Biscuit1.gif`/`Biscuit2.gif` (still procedural canvas paths, no
+  image sprites — those gifs were reference art only, never wired in as
+  sprites, contrary to the original assumption that they were).
+- ~~Chunk R: more items and events.~~ Done — added 6 items to `ITEMS`
+  (data.js): `berries`, `fish`, `flute`, `soap`, `key`, `barrel` (the last a
+  2×2 footprint), with `key`/`barrel` in `RARE_WEIGHTS` as uncommon. Added 6
+  events to `EVENTS`: `skunk`, `heron`, `giant`, `gate`, `drought`, `bramble`
+  (mostly 2-item-option + 1-risky, matching the existing shape; `bramble`
+  uses the item+item+skip shape like `donkey`/`traveler`), wired into
+  `REGIONS` pools by theme (woods gets `giant`+`skunk`, bay gets `heron`,
+  pass gets `drought`, festival gets `gate`, meadow gets `bramble`).

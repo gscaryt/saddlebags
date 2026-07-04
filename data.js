@@ -26,7 +26,7 @@ const Store={
 };
 const SAVE_KEY='saddlebags_v1';
 function defaultSave(){return{
-  coins:12, day:1, bestDay:0, totalEarned:0, deliveries:0, mute:0, tut:0,
+  coins:20, day:1, bestDay:0, totalEarned:0, deliveries:0, mute:0, tut:0,
   owned:{coat:['chestnut'],mane:['cocoa'],beak:['classic'],hat:['none'],blanket:['crimson'],trail:['none']},
   eq:{coat:'chestnut',mane:'cocoa',beak:'classic',hat:'none',blanket:'crimson',trail:'none'},
   gear:{bags:0,saddle:0,shoe:0,spy:0,pouch:0,charm:0}
@@ -42,14 +42,14 @@ const Sound={
   ctx:null,
   ensure(){if(!this.ctx){try{this.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){this.ctx=null;}}
     if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();return this.ctx;},
-  tone(type,f0,f1,dur,vol,when){const c=this.ctx;if(!c||SV.mute)return;
+  tone(type,f0,f1,dur,vol,when){const c=this.ensure();if(!c||SV.mute)return;
     const t=c.currentTime+(when||0);const o=c.createOscillator(),g=c.createGain();
     o.type=type;o.frequency.setValueAtTime(f0,t);
     if(f1&&f1!==f0)o.frequency.exponentialRampToValueAtTime(Math.max(f1,1),t+dur);
     g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.012);
     g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
     o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+0.05);},
-  noise(dur,vol,fc,when){const c=this.ctx;if(!c||SV.mute)return;
+  noise(dur,vol,fc,when){const c=this.ensure();if(!c||SV.mute)return;
     const t=c.currentTime+(when||0);const n=Math.floor(c.sampleRate*dur);
     const buf=c.createBuffer(1,n,c.sampleRate),d=buf.getChannelData(0);
     for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
@@ -99,9 +99,15 @@ const ITEMS={
   sus:      {e:'🍈',n:'Odd Melon',w:2,fw:2,   sell:1, cost:1},
   melon:    {e:'🍉',n:'Melon',    w:4,fw:2,fh:2,food:12,sell:10,cost:6},
   parcel:   {e:'📦',n:'Big Parcel',w:3,fw:3,   sell:11,cost:6},
+  berries:  {e:'🫐',n:'Berries',   w:1,food:3, sell:2, cost:1},
+  fish:     {e:'🐟',n:'Fish',      w:1,food:4, sell:3, cost:2},
+  flute:    {e:'🪈',n:'Flute',     w:1,        sell:5, cost:3},
+  soap:     {e:'🧼',n:'Soap',      w:1,        sell:4, cost:2},
+  key:      {e:'🔑',n:'Key',       w:1,        sell:6, cost:4},
+  barrel:   {e:'🛢️',n:'Barrel',   w:3,fw:2,fh:2,sell:9, cost:5},
 };
 for(const k in ITEMS){ITEMS[k].fw=ITEMS[k].fw||1;ITEMS[k].fh=ITEMS[k].fh||1;}
-const RARE_WEIGHTS={melon:0.6,gem:0.22,sus:0.35,map:0.5,hat:0.7,honey:0.85,plank:0.9,bell:0.8,parcel:0.45};
+const RARE_WEIGHTS={melon:0.6,gem:0.22,sus:0.35,map:0.5,hat:0.7,honey:0.85,plank:0.9,bell:0.8,parcel:0.45,key:0.6,barrel:0.55};
 
 const EVENTS={
   rain:{icon:'🌧️',title:'Sudden downpour!',desc:'Fat raindrops drum on the road.',
@@ -212,26 +218,62 @@ const EVENTS={
     ]},
   trade:{icon:'🛖',title:'A wandering trader',desc:'“Pssst. I collect heavy things. Trade you a gem.”',special:'trade'},
   chest:{icon:'🎁',title:'A gift chest?!',desc:'Sitting in the road, slightly sparkly, definitely not a trap.',special:'chest'},
+  skunk:{icon:'🦨',title:'A skunk raises its tail',desc:'This is a very clear warning.',
+    opts:[
+      {item:'soap',label:'Offer a bath after',coins:10,text:'Deal struck. Everyone smells like lavender by evening.'},
+      {item:'umbrella',label:'Shield and shuffle past',coins:8,text:'Tactical retreat, umbrella-first.'},
+      {risky:1,label:'Tip-toe past',good:{coins:10,text:'Not a single spray. Nerves of steel.'},bad:{heart:-1,text:'Oh no. OH NO. Everyone smells it for days.'}},
+    ]},
+  heron:{icon:'🐦',title:'A fussy heron blocks the ford',desc:'It wants a toll. Specifically, a fish-shaped toll.',
+    opts:[
+      {item:'fish',label:'Pay the fish toll',coins:12,text:'The heron accepts, unbothered, regal.'},
+      {item:'bread',label:'Offer bread instead',coins:8,text:'Reluctantly accepted. The heron is judging you.'},
+      {risky:1,label:'Wade past its glare',good:{coins:9,text:'Held eye contact the whole way. Respect earned.'},bad:{heart:-1,text:'A peck to the ear. Undignified yelping ensues.'}},
+    ]},
+  giant:{icon:'🧌',title:'A snoring giant naps across the road',desc:'Its snore alone is rattling the saddlebags.',
+    opts:[
+      {item:'flute',label:'Play a soft lullaby',coins:14,text:'It rolls over and snores even louder. Passable.'},
+      {item:'honey',label:'Leave a honey snack',coins:10,text:'It smacks its lips in its sleep. Bribery, achieved.'},
+      {risky:1,label:'Tip-toe between the toes',good:{coins:12,text:'A masterclass in not waking a giant.'},bad:{heart:-1,text:'One eye opens. Everyone sprints.'}},
+    ]},
+  gate:{icon:'🚪',title:'A locked garden gate',desc:'Shortcut’s right there. So is the lock.',
+    opts:[
+      {item:'key',label:'Try the spare key',coins:12,text:'Click. It actually works. Miracles happen.'},
+      {item:'rope',label:'Rope over the wall',coins:9,text:'Undignified, but efficient.'},
+      {risky:1,label:'Pick the lock',good:{coins:11,text:'Pip’s beak is surprisingly good at this.'},bad:{heart:-1,text:'Snapped the lockpick. And a claim of innocence.'}},
+    ]},
+  drought:{icon:'🏜️',title:'A dry, dusty stretch',desc:'Not a drop of water in sight. Biscuit is Not Pleased.',
+    opts:[
+      {item:'barrel',label:'Share the water barrel',coins:14,text:'Biscuit drinks like he’s never seen water before.'},
+      {item:'melon',label:'Juicy melon break',coins:10,text:'Surprisingly refreshing. Slightly sticky.'},
+      {risky:1,label:'Push on through',good:{coins:8,text:'Powered through on stubbornness alone.'},bad:{heart:-1,text:'A very grumpy, very thirsty horse.'}},
+    ]},
+  bramble:{icon:'🫐',title:'A tempting bramble patch',desc:'Biscuit has stopped. Biscuit is not un-stopping.',
+    opts:[
+      {item:'berries',label:'Let him snack first',coins:8,heart:1,text:'Purple-stained muzzle, happy horse.'},
+      {item:'carrot',label:'Trade for a carrot',coins:6,text:'A fair trade, grudgingly accepted.'},
+      {skip:1,label:'Insist on moving',coins:2,text:'A very put-upon sigh from Biscuit.'},
+    ]},
 };
 
 const REGIONS=[
-  {id:'meadow', name:'Meadow Market', icon:'🌾', pool:['rain','goat','donkey','traveler','mud','wheel'],
+  {id:'meadow', name:'Meadow Market', icon:'🌾', pool:['rain','goat','donkey','traveler','mud','wheel','bramble'],
    orders:['bread','apple','cheese','sunflower'],
    sky:['#8ED6FF','#EAF9E0'], far:'#A8D971', mid:'#8CC152', ground:'#7CB342', prop:'meadow',
    arrive:'The market crowd cheers as Biscuit trots in!'},
-  {id:'woods', name:'Whispering Woods', icon:'🌲', pool:['wolves','dark','mice','bees','donkey','bear','river'],
+  {id:'woods', name:'Whispering Woods', icon:'🌲', pool:['wolves','dark','mice','bees','donkey','bear','river','giant','skunk'],
    orders:['bread','cheese','melon','honey'],
    sky:['#5E9C8F','#D8EFC0'], far:'#4E8A66', mid:'#3E7C59', ground:'#4F7A4A', prop:'woods',
    arrive:'The woodland cabin lights up as you arrive!'},
-  {id:'pass', name:'Windy Pass', icon:'⛰️', pool:['cold','cliff','goat','rain','river','rainbow'],
+  {id:'pass', name:'Windy Pass', icon:'⛰️', pool:['cold','cliff','goat','rain','river','rainbow','drought'],
    orders:['scarf','bread','melon','cheese'],
    sky:['#9FB8E8','#EDEAF4'], far:'#8E97AD', mid:'#707A94', ground:'#8A8F78', prop:'pass',
    arrive:'The mountain village rings its little bell for you!'},
-  {id:'festival', name:'Sunfair Festival', icon:'🎪', pool:['noble','traveler','mice','bees','trade','dance','guard'],
+  {id:'festival', name:'Sunfair Festival', icon:'🎪', pool:['noble','traveler','mice','bees','trade','dance','guard','gate'],
    orders:['melon','hat','sunflower','honey'],
    sky:['#FFB88C','#FFF3B0'], far:'#E8A05C', mid:'#D9A45B', ground:'#C79452', prop:'festival',
    arrive:'The festival crowd lifts Pip onto their shoulders!'},
-  {id:'bay', name:'Moonlight Bay', icon:'🌊', pool:['dark','rain','cliff','trade','river','guard','rainbow'],
+  {id:'bay', name:'Moonlight Bay', icon:'🌊', pool:['dark','rain','cliff','trade','river','guard','rainbow','heron'],
    orders:['lantern','bread','melon','gem'],
    sky:['#2E3A67','#8B79B8'], far:'#4A5580', mid:'#3E5F8A', ground:'#5C6B7A', prop:'bay',
    arrive:'The lighthouse keeper waves her hat from the tower!'},

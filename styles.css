@@ -25,6 +25,8 @@ body{
 .pill.gold{background:#FFF0C2;border-color:var(--goldD);}
 #muteBtn{pointer-events:auto;cursor:pointer;}
 #homeBtn{pointer-events:auto;cursor:pointer;}
+#bagBtn{pointer-events:auto;cursor:pointer;}
+#routePill{pointer-events:auto;cursor:pointer;}
 #patwrap{height:13px;border-radius:8px;background:rgba(0,0,0,.18);overflow:hidden;
   border:2px solid rgba(122,74,33,.55);margin:0 26px;}
 #patbar{height:100%;width:100%;border-radius:6px;

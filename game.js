@@ -23,6 +23,12 @@ function heaviestItem(){let best=null,bw=-1;
   return best;}
 function eachPacked(fn){for(const bag of[G.bagL,G.bagR])for(const p of bag.places)fn(p.id);}
 function riskP(){return clamp(0.55+(SV.gear.shoe?0.12:0)+(SV.gear.charm?0.06:0)+(G.hearts-1.5)*0.04-Math.min(G.tier*0.03,0.09),0.2,0.95);}
+// one flat "Biscuit looks great" bonus once anything's been bought from the shop — small and doesn't stack per item
+function wardrobeBonus(){
+  const def={coat:1,mane:1,beak:1,hat:1,blanket:1,trail:1};
+  let extra=0;for(const cat in def)extra+=SV.owned[cat].length-def[cat];
+  return extra>0?1:0;
+}
 function walletLeft(){return Math.max(0,SV.coins-G.daySpent);}
 
 /* ---------- day building ---------- */
@@ -66,7 +72,8 @@ function buildDay(){
     if(ev.opts)for(const o of ev.opts)if(o.item)G.routeSet.add(o.item);});
   // reset day state
   G.bagL={places:[]};G.bagR={places:[]};
-  G.hearts=3;G.dayCoins=0;G.eventCoins=0;G.daySpent=0;G.rescued=false;
+  // Biscuit starts low-spirited; feeding him apples/carrots before departure (feedHorse) tops it back up
+  G.hearts=Math.min(3,1+wardrobeBonus());G.dayCoins=0;G.eventCoins=0;G.daySpent=0;G.rescued=false;
   G.burst=0;G.weather=null;
   G.belt=[];G.beltTimer=0;G.held=null;G.spill=false;G.nodeIdx=0;G.wx=0;G.stunt=null;
   if(SV.gear.pouch){const f=fitInto(G.bagL,'apple');if(f)G.bagL.places.push(Object.assign({id:'apple'},f));}
@@ -288,6 +295,7 @@ function feedHorse(){
   touGoto('toMouth',hp.x+80*hp.s,hp.y-152*hp.s,0.35,()=>{
     G.held=null;Sound.munch();vibe(12);
     G.pat=Math.min(G.patMax,G.pat+d.food);
+    G.hearts=Math.min(3,G.hearts+1);
     pText(hp.x+70*hp.s,hp.y-160*hp.s,'+'+d.food+'s ⏳','#4F9A3A',18);
     pHeart(hp.x+40*hp.s,hp.y-150*hp.s,2);
     touGoto('return',L.homeTou.x,L.homeTou.y,0.35,()=>{G.tou.mode='hover';});
@@ -443,6 +451,7 @@ function showRouteCard(){
 /* ---------- encounter cards ---------- */
 function optBtn(inner,cls){return '<button class="opt '+(cls||'')+'">'+inner+'</button>';}
 const ITEM_FAILS=['Nice try — that didn’t quite land.','Almost! Not this time.','Huh. That fizzled.','Worth a shot — no dice.'];
+const ITEM_SUCCESS_P=0.9; // packed items are the safe bet — considerably less risky than Pip improvising (riskP(), ~0.5-0.7)
 function showEventCard(nd){
   const ev=EVENTS[nd.ev];
   let html='<div class="cicon">'+ev.icon+'</div><h2>'+ev.title+'</h2><div class="cdesc">'+ev.desc+'</div>';
@@ -467,9 +476,9 @@ function showEventCard(nd){
       if(o.item){
         const has=countItem(o.item)>0,d=ITEMS[o.item];
         html+='<button class="opt"'+(has?'':' disabled')+'><span class="oe">'+d.e+'</span><span class="ol">'+o.label+
-          '<small>'+(has?'uses 1 '+d.n+' · usually works':'you didn’t pack a '+d.n)+'</small></span><span class="on">+'+o.coins+'🪙'+(o.heart?' <span style="color:var(--greenD)">▲</span>':'')+'</span></button>';
+          '<small>'+(has?'uses 1 '+d.n+' · '+Math.round(ITEM_SUCCESS_P*100)+'% safe':'you didn’t pack a '+d.n)+'</small></span><span class="on">+'+o.coins+'🪙'+(o.heart?' <span style="color:var(--greenD)">▲</span>':'')+'</span></button>';
         acts.push(has?()=>{removeItem(o.item);
-          if(Math.random()<0.82)applyOutcome(ev,o.coins,o.heart||0,o.text);
+          if(Math.random()<ITEM_SUCCESS_P)applyOutcome(ev,o.coins,o.heart||0,o.text);
           else applyOutcome(ev,0,-1,choice(ITEM_FAILS),true);
         }:null);
       }else if(o.risky){
