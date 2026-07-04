@@ -1,7 +1,9 @@
 # 🪶 SADDLEBAGS 🐴
 *Pip & Biscuit's Delivery Co.* — a cozy pack-and-trot roguelite minigame for mobile.
 
-**Play:** open `index.html` on any phone (or host on GitHub Pages — no build step, single self-contained file).
+**Play:** open `index.html` on any phone (or host on GitHub Pages — no build step, just static files).
+
+**Code map:** see [`INDEX.md`](INDEX.md) for what lives in each file (`index.html`, `styles.css`, `data.js`, `engine.js`, `game.js`).
 
 ## How it plays
 1. **Pack** — market crates drift by on a conveyor. Tap one and Pip the toucan snatches it; stow it in Biscuit's left or right saddlebag. Keep the weights balanced or items tumble off on the road! Food can also be fed to Biscuit (tap his head) to extend his patience timer.
